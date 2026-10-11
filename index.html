@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>N // The Vector Ray Mobile</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: #020602;
+      color: #33ff66;
+      font-family: -apple-system, BlinkMacSystemFont, 'Courier New', Courier, monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    
+    #display-container {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 2px solid #1a5c2b;
+      box-shadow: 0 4px 20px rgba(51, 255, 102, 0.15);
+      background: #000802;
+      touch-action: none;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #hud {
+      position: absolute;
+      top: 6px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 4px #33ff66;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    #mobile-console {
+      width: 100%;
+      height: 220px;
+      background: #010b03;
+      display: flex;
+      flex-direction: column;
+      padding: 8px 12px 14px 12px;
+      gap: 8px;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .touch-btn {
+      flex: 1;
+      background: rgba(0, 24, 8, 0.85);
+      border: 1px solid #1f6b33;
+      color: #33ff66;
+      padding: 8px 4px;
+      border-radius: 6px;
+      font-size: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+    }
+    .touch-btn:active, .touch-btn.active {
+      background: #33ff66;
+      color: #000802;
+      box-shadow: 0 0 10px #33ff66;
+    }
+    .touch-btn b {
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    #tactile-split {
+      display: flex;
+      flex: 1;
+      gap: 10px;
+    }
+    #polarity-btn {
+      width: 32%;
+      background: #092610;
+      border: 2px solid #33ff66;
+      color: #ffffff;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 13px;
+      box-shadow: 0 0 10px rgba(51, 255, 102, 0.2);
+      cursor: pointer;
+    }
+    #polarity-btn:active {
+      background: #33ff66;
+      color: #000;
+    }
+
+    #touch-slider-pad {
+      flex: 1;
+      background: #041407;
+      border: 1px dashed #207238;
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(51, 255, 102, 0.4);
+      font-size: 11px;
+      letter-spacing: 1px;
+      touch-action: none;
+    }
+    #touch-indicator {
+      position: absolute;
+      width: 30px;
+      height: 70%;
+      border-radius: 4px;
+      background: rgba(51, 255, 102, 0.35);
+      border: 1px solid #33ff66;
+      pointer-events: none;
+      left: 20%;
+    }
+
+    #overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 8, 2, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 100;
+      text-align: center;
+      padding: 20px;
+      pointer-events: auto;
+    }
+    .cta-btn {
+      background: #0a2912;
+      color: #33ff66;
+      border: 2px solid #33ff66;
+      padding: 14px 32px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: bold;
+      border-radius: 8px;
+      box-shadow: 0 0 16px rgba(51, 255, 102, 0.4);
+      cursor: pointer;
+      display: inline-block;
+    }
+    .cta-btn:active {
+      background: #33ff66;
+      color: #000802;
+    }
+  </style>
+</head>
+<body>
+
+<div id="display-container">
+  <canvas id="crt"></canvas>
+  <div id="hud">
+    <div id="status-left">N=1/10 | INTEGRITY: 100%</div>
+    <div id="resources">HZ:0 V:0 BD:0</div>
+    <div id="boss-hud">SOV: 100%</div>
+  </div>
+</div>
+
+<div id="mobile-console">
+  <div class="button-row">
+    <div class="touch-btn" id="btn-a">
+      <b>[A] CHOKE</b>
+      <span>2 HZ + 1 V</span>
+    </div>
+    <div class="touch-btn" id="btn-s">
+      <b>[S] BIAS</b>
+      <span>1 HZ + 2 V</span>
+    </div>
+    <div class="touch-btn" id="btn-d">
+      <b>[D] GHOST</b>
+      <span>1 V + 2 BD</span>
+    </div>
+  </div>
+
+  <div id="tactile-split">
+    <div id="polarity-btn">
+      <span style="font-size: 10px; opacity: 0.8;">POLARITY</span>
+      <span id="pol-text">GROUND</span>
+    </div>
+    <div id="touch-slider-pad">
+      <span>DRAG TO SLIDE RAY</span>
+      <div id="touch-indicator"></div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <h2 id="overlay-title" style="letter-spacing: 4px; text-shadow: 0 0 12px #33ff66;">N : VECTOR RAY</h2>
+  <p id="overlay-desc" style="font-size: 12px; line-height: 1.5; color: #88ffaa; max-width: 320px;">
+    Slide your thumb across the trackpad to intercept waves along the 1D beam.<br><br>
+    Tap <b>POLARITY</b> to cycle:<br>
+    <span style="color:#55ff99">CREST (+)</span> ── <span style="color:#ffffff">GROUND (0)</span> ── <span style="color:#ff66aa">TROUGH (-)</span><br><br>
+    Resources persist across defeat via your <b>Carrier Vault</b>.
+  </p>
+  <div id="vault-readout" style="font-size: 12px; color: #ffff88;">VAULT: 0 HZ | 0 V | 0 BD</div>
+  <button class="cta-btn" id="start-btn">ENGAGE BEAM</button>
+</div>
+
+<script>
+// --- LOCAL PERSISTENCE ---
+const STORAGE_KEY = 'N_GAME_VAULT_SAVE_MOBILE';
+function loadVault() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try { return JSON.parse(saved); } catch (e) {}
+  }
+  return { vaultHz: 0, vaultVolts: 0, vaultBaud: 0, totalRuns: 1 };
+}
+function saveVault(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {}
+}
+let persistentVault = loadVault();
+
+// --- HAPTIC FEEDBACK ---
+function vibrate(ms) {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(ms); } catch (e) {}
+  }
+}
+
+// --- AUDIO ENGINE ---
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtor) audioCtx = new AudioCtor();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playTone(freq, type = 'sine', duration = 0.08, vol = 0.15) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+// --- CANVAS & SIZING ---
+const canvas = document.getElementById('crt');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('display-container');
+
+function resizeCanvas() {
+  canvas.width = container.clientWidth || window.innerWidth;
+  canvas.height = container.clientHeight || 240;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let running = false;
+let dimensionalFold = 0;
+
+const state = {
+  nLevel: 1,
+  integrity: 100,
+  maxIntegrity: 100,
+  bossHp: 100,
+  hz: 0,
+  volts: 0,
+  baud: 0,
+  paddleNormalized: 0.25,
+  basePaddleLength: 16,
+  parity: 0,
+  chokeTimer: 0,
+  overdriveActive: false,
+  autoParryCharges: 0,
+  pulses: [],
+  particles: [],
+  glitches: []
+};
+
+function getTraceBounds() {
+  const startX = 24;
+  const endX = Math.max(100, canvas.width - 24);
+  const traceY = canvas.height * 0.52;
+  return { startX, endX, traceY, width: endX - startX };
+}
+
+// --- TOUCH INTERACTION ---
+const sliderPad = document.getElementById('touch-slider-pad');
+const touchIndicator = document.getElementById('touch-indicator');
+let isTouchingSlider = false;
+
+function handleSliderCoord(clientX) {
+  const rect = sliderPad.getBoundingClientRect();
+  let ratio = (clientX - rect.left) / rect.width;
+  ratio = Math.max(0.05, Math.min(0.95, ratio));
+  state.paddleNormalized = ratio;
+  touchIndicator.style.left = `${(ratio * 100) - 8}%`;
+}
+
+sliderPad.addEventListener('pointerdown', (e) => {
+  isTouchingSlider = true;
+  handleSliderCoord(e.clientX);
+});
+window.addEventListener('pointermove', (e) => {
+  if (isTouchingSlider) handleSliderCoord(e.clientX);
+});
+window.addEventListener('pointerup', () => { isTouchingSlider = false; });
+window.addEventListener('pointercancel', () => { isTouchingSlider = false; });
+
+// Polarity button tap
+const polBtn = document.getElementById('polarity-btn');
+const polText = document.getElementById('pol-text');
+
+function cyclePolarity() {
+  if (state.parity === 0) {
+    state.parity = 1;
+    polText.textContent = "CREST (+)";
+    polBtn.style.borderColor = "#55ff99";
+    polBtn.style.color = "#55ff99";
+    playTone(520, 'sine', 0.05, 0.1);
+  } else if (state.parity === 1) {
+    state.parity = -1;
+    polText.textContent = "TROUGH (-)";
+    polBtn.style.borderColor = "#ff66aa";
+    polBtn.style.color = "#ff66aa";
+    playTone(240, 'sine', 0.05, 0.1);
+  } else {
+    state.parity = 0;
+    polText.textContent = "GROUND";
+    polBtn.style.borderColor = "#33ff66";
+    polBtn.style.color = "#ffffff";
+    playTone(380, 'sine', 0.05, 0.1);
+  }
+  vibrate(10);
+}
+polBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  cyclePolarity();
+});
+
+// Patch buttons
+function flashBtn(id) {
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 200);
+}
+
+document.getElementById('btn-a').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (state.hz >= 2 && state.volts >= 1) {
+    state.hz -= 2;
+    state.volts -= 1;
+    state.chokeTimer = 160;
+    flashBtn('btn-a');
+    playTone(160, 'sawtooth', 0.25, 0.2);
+    vibrate(25);
+  }
+});
+
+document.getElementById('btn-s').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (state.hz >= 1 && state.volts >= 2) {
+    state.hz -= 1;
+    state.volts -= 2;
+    state.overdriveActive = true;
+    flashBtn('btn-s');
+    playTone(660, 'square', 0.2, 0.2);
+    vibrate(30);
+  }
+});
+
+document.getElementById('btn-d').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (state.volts >= 1 && state.baud >= 2) {
+    state.volts -= 1;
+    state.baud -= 2;
+    state.autoParryCharges += 1;
+    flashBtn('btn-d');
+    playTone(880, 'sine', 0.2, 0.2);
+    vibrate(35);
+  }
+});
+
+// --- SPAWNING & DIFFICULTY ---
+let spawnCooldown = 0;
+let glitchCooldown = 0;
+
+function getDifficultyScale() {
+  return (state.nLevel - 1) / 9;
+}
+
+function spawnWave() {
+  const { endX } = getTraceBounds();
+  const diff = getDifficultyScale();
+  const types = [
+    { pol: 1, type: 'crest', color: '#55ff99', res: 'hz' },
+    { pol: -1, type: 'trough', color: '#ff66aa', res: 'volts' },
+    { pol: 0, type: 'packet', color: '#66ccff', res: 'baud' }
+  ];
+
+  const burstCount = Math.random() < (diff * 0.6) ? 2 : 1;
+  for (let b = 0; b < burstCount; b++) {
+    const choice = types[Math.floor(Math.random() * types.length)];
+    state.pulses.push({
+      x: endX + (b * 40),
+      speed: -(2.2 + diff * 3.5),
+      pol: choice.pol,
+      color: choice.color,
+      res: choice.res,
+      amplitude: 18 + Math.random() * 6,
+      reflected: false
+    });
+  }
+}
+
+function spawnGlitch() {
+  const { startX, width } = getTraceBounds();
+  const diff = getDifficultyScale();
+  if (diff < 0.25) return;
+
+  state.glitches.push({
+    x: startX + width * (0.35 + Math.random() * 0.5),
+    width: 20 + Math.random() * 20,
+    life: 180 + Math.random() * 120
+  });
+}
+
+function addSparks(x, y, color, count = 8) {
+  for (let i = 0; i < count; i++) {
+    state.particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 5,
+      vy: (Math.random() - 0.5) * 5,
+      alpha: 1,
+      color
+    });
+  }
+}
+
+function checkLevelUp() {
+  const cost = 2 + Math.floor(state.nLevel / 4);
+  if (state.hz >= cost && state.volts >= cost && state.baud >= cost && state.nLevel < 10) {
+    state.hz -= cost;
+    state.volts -= cost;
+    state.baud -= cost;
+    state.nLevel++;
+    state.integrity = Math.min(state.maxIntegrity, state.integrity + 20);
+    playTone(770, 'triangle', 0.4, 0.2);
+    vibrate([40, 60, 80]);
+  }
+}
+
+function startRun() {
+  state.hz = persistentVault.vaultHz;
+  state.volts = persistentVault.vaultVolts;
+  state.baud = persistentVault.vaultBaud;
+  state.maxIntegrity = Math.min(160, 100 + (persistentVault.totalRuns - 1) * 2);
+  state.integrity = state.maxIntegrity;
+  state.nLevel = 1;
+  state.bossHp = 100;
+  state.pulses = [];
+  state.glitches = [];
+  state.particles = [];
+  state.chokeTimer = 0;
+  state.overdriveActive = false;
+  state.autoParryCharges = 0;
+  state.paddleNormalized = 0.25;
+  dimensionalFold = 0;
+
+  document.getElementById('overlay').style.display = 'none';
+  running = true;
+}
+
+function handleDeath() {
+  running = false;
+  vibrate(300);
+  persistentVault.totalRuns++;
+
+  const savedHz = Math.floor(state.hz * 0.6);
+  const savedVolts = Math.floor(state.volts * 0.6);
+  const savedBaud = Math.floor(state.baud * 0.6);
+
+  persistentVault.vaultHz = savedHz;
+  persistentVault.vaultVolts = savedVolts;
+  persistentVault.vaultBaud = savedBaud;
+  saveVault(persistentVault);
+
+  const overlay = document.getElementById('overlay');
+  document.getElementById('overlay-title').textContent = "TRACE BREACHED";
+  document.getElementById('overlay-title').style.color = "#ff4444";
+  document.getElementById('overlay-desc').innerHTML = `
+    Line severed at <b>N=${state.nLevel}</b>.<br>
+    <b>60% Retained to Vault:</b><br>
+    +${savedHz} HZ | +${savedVolts} V | +${savedBaud} BD.<br>
+    Starting HP buff active for Run #${persistentVault.totalRuns}.
+  `;
+  document.getElementById('vault-readout').textContent = 
+    `VAULT: ${savedHz} HZ | ${savedVolts} V | ${savedBaud} BD (RUN #${persistentVault.totalRuns})`;
+  document.getElementById('start-btn').textContent = `REINITIALIZE (RUN #${persistentVault.totalRuns})`;
+  overlay.style.display = 'flex';
+}
+
+function update() {
+  if (!running) return;
+
+  const { startX, endX, traceY, width } = getTraceBounds();
+  const diff = getDifficultyScale();
+
+  if (state.chokeTimer > 0) state.chokeTimer--;
+
+  const targetCadence = Math.max(20, Math.round(75 - diff * 55));
+  spawnCooldown++;
+  if (spawnCooldown >= (state.chokeTimer > 0 ? targetCadence * 2.2 : targetCadence)) {
+    spawnWave();
+    spawnCooldown = 0;
+  }
+
+  glitchCooldown++;
+  if (glitchCooldown >= Math.max(80, Math.round(240 - diff * 160))) {
+    spawnGlitch();
+    glitchCooldown = 0;
+  }
+
+  checkLevelUp();
+
+  const paddleX = startX + width * state.paddleNormalized;
+  const paddleWidth = state.basePaddleLength * (1 + state.nLevel * 0.45);
+  const halfPaddle = paddleWidth / 2;
+
+  // Glitches
+  for (let i = state.glitches.length - 1; i >= 0; i--) {
+    const g = state.glitches[i];
+    g.life--;
+    if (Math.abs(paddleX - g.x) < (halfPaddle + g.width / 2)) {
+      state.integrity = Math.max(0, state.integrity - 0.22);
+      if (Math.random() < 0.2) vibrate(12);
+    }
+    if (g.life <= 0) state.glitches.splice(i, 1);
+  }
+
+  // Pulses
+  for (let i = state.pulses.length - 1; i >= 0; i--) {
+    const p = state.pulses[i];
+    let speedMod = (state.chokeTimer > 0 && !p.reflected) ? 0.42 : 1.0;
+    if (!p.reflected && p.x < startX + width * 0.35) {
+      speedMod *= 0.8;
+    }
+    p.x += p.speed * speedMod;
+
+    if (p.reflected && p.x >= endX) {
+      state.bossHp = Math.max(0, state.bossHp - (state.overdriveActive ? 18 : 9));
+      state.overdriveActive = false;
+      addSparks(endX, traceY, '#ffff44', 12);
+      playTone(420, 'square', 0.1, 0.2);
+      vibrate(20);
+      state.pulses.splice(i, 1);
+      continue;
+    }
+
+    if (!p.reflected && Math.abs(p.x - paddleX) < halfPaddle + 8) {
+      const matched = (p.pol === state.parity);
+
+      if (matched || state.autoParryCharges > 0) {
+        if (!matched && state.autoParryCharges > 0) state.autoParryCharges--;
+
+        let yieldMult = 1;
+        if (state.paddleNormalized > 0.70) yieldMult = 3 + Math.floor(diff * 2);
+        else if (state.paddleNormalized > 0.35) yieldMult = 2;
+
+        if (p.res === 'hz') state.hz += yieldMult;
+        if (p.res === 'volts') state.volts += yieldMult;
+        if (p.res === 'baud') state.baud += yieldMult;
+
+        playTone(560 + yieldMult * 80, 'sine', 0.08, 0.15);
+        addSparks(p.x, traceY, p.color, 8 * yieldMult);
+        vibrate(15);
+
+        p.reflected = true;
+        p.speed = Math.abs(p.speed) * (state.overdriveActive ? 2.4 : 1.5);
+      } else {
+        state.integrity = Math.max(0, state.integrity - (12 + diff * 10));
+        playTone(90, 'sawtooth', 0.2, 0.25);
+        addSparks(paddleX, traceY, '#ff2222', 14);
+        vibrate(80);
+        state.pulses.splice(i, 1);
+      }
+      continue;
+    }
+
+    if (p.x < startX) {
+      state.integrity = Math.max(0, state.integrity - 6);
+      state.pulses.splice(i, 1);
+    }
+  }
+
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const pt = state.particles[i];
+    pt.x += pt.vx;
+    pt.y += pt.vy;
+    pt.alpha -= 0.04;
+    if (pt.alpha <= 0) state.particles.splice(i, 1);
+  }
+
+  if (state.bossHp <= 0 && state.nLevel >= 10) {
+    dimensionalFold = Math.min(1, dimensionalFold + 0.012);
+  } else if (state.bossHp <= 0 && state.nLevel < 10) {
+    state.bossHp = 40;
+  }
+
+  if (state.integrity <= 0) {
+    handleDeath();
+    return;
+  }
+
+  document.getElementById('status-left').textContent = 
+    `N=${state.nLevel}/10 | HULL: ${Math.round(state.integrity)}%`;
+  document.getElementById('resources').textContent = 
+    `HZ:${state.hz} V:${state.volts} BD:${state.baud}`;
+  document.getElementById('boss-hud').textContent = 
+    `SOV: ${state.bossHp}%`;
+}
+
+function draw() {
+  ctx.fillStyle = 'rgba(0, 8, 2, 0.4)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const { startX, endX, traceY, width } = getTraceBounds();
+
+  ctx.strokeStyle = 'rgba(26, 92, 43, 0.12)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 30) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 30) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  ctx.fillStyle = 'rgba(20, 60, 30, 0.08)';
+  ctx.fillRect(startX, traceY - 35, width * 0.35, 70);
+  ctx.fillStyle = 'rgba(51, 255, 102, 0.06)';
+  ctx.fillRect(startX + width * 0.35, traceY - 35, width * 0.35, 70);
+  ctx.fillStyle = 'rgba(255, 180, 50, 0.08)';
+  ctx.fillRect(startX + width * 0.70, traceY - 35, width * 0.30, 70);
+
+  ctx.strokeStyle = '#185926';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(startX, traceY);
+  ctx.lineTo(endX, traceY);
+  ctx.stroke();
+
+  state.glitches.forEach(g => {
+    ctx.fillStyle = 'rgba(255, 40, 40, 0.25)';
+    ctx.fillRect(g.x - g.width / 2, traceY - 12, g.width, 24);
+  });
+
+  const diff = getDifficultyScale();
+  ctx.fillStyle = diff > 0.6 ? '#ffaa33' : '#33ff66';
+  ctx.shadowColor = ctx.fillStyle;
+  ctx.shadowBlur = 10;
+  ctx.fillRect(endX - 6, traceY - 14, 12, 28);
+
+  state.pulses.forEach(p => {
+    ctx.strokeStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    const h = p.pol === 1 ? -p.amplitude : p.pol === -1 ? p.amplitude : 0;
+    if (p.pol === 0) {
+      ctx.strokeRect(p.x - 8, traceY - 7, 16, 14);
+    } else {
+      ctx.moveTo(p.x - 14, traceY);
+      ctx.quadraticCurveTo(p.x, traceY + h, p.x + 14, traceY);
+      ctx.stroke();
+    }
+  });
+
+  const paddleX = startX + width * state.paddleNormalized;
+  const paddleWidth = state.basePaddleLength * (1 + state.nLevel * 0.45);
+  ctx.strokeStyle = state.overdriveActive ? '#ffff44' : '#ffffff';
+  ctx.shadowColor = state.overdriveActive ? '#ffff44' : '#33ff66';
+  ctx.shadowBlur = 14;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(paddleX - paddleWidth / 2, traceY);
+  ctx.lineTo(paddleX + paddleWidth / 2, traceY);
+  ctx.stroke();
+
+  if (state.parity !== 0) {
+    ctx.strokeStyle = state.parity === 1 ? '#55ff99' : '#ff66aa';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const offsetY = state.parity === 1 ? -12 : 12;
+    ctx.moveTo(paddleX - 6, traceY + offsetY);
+    ctx.lineTo(paddleX, traceY + offsetY * 1.5);
+    ctx.lineTo(paddleX + 6, traceY + offsetY);
+    ctx.stroke();
+  }
+
+  if (state.autoParryCharges > 0) {
+    ctx.strokeStyle = 'rgba(102, 204, 255, 0.7)';
+    ctx.strokeRect(paddleX - paddleWidth / 2 - 3, traceY - 10, paddleWidth + 6, 20);
+  }
+
+  state.particles.forEach(pt => {
+    ctx.fillStyle = pt.color;
+    ctx.globalAlpha = Math.max(0, pt.alpha);
+    ctx.fillRect(pt.x, pt.y, 2, 2);
+    ctx.globalAlpha = 1;
+  });
+
+  if (dimensionalFold > 0) {
+    ctx.fillStyle = `rgba(0, 20, 5, ${dimensionalFold * 0.95})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const foldH = dimensionalFold * 140;
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = '#33ff66';
+    ctx.shadowBlur = 20;
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2 - 60, traceY);
+    ctx.lineTo(canvas.width / 2 + 60, traceY);
+    ctx.lineTo(canvas.width / 2 + 60, traceY - foldH);
+    ctx.lineTo(canvas.width / 2 - 60, traceY - foldH);
+    ctx.closePath();
+    ctx.stroke();
+
+    if (dimensionalFold > 0.5) {
+      const alpha = (dimensionalFold - 0.5) / 0.5;
+      ctx.fillStyle = `rgba(51, 255, 102, ${alpha})`;
+      ctx.font = '12px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText("ORTHOGONAL TEAR ACHIEVED", canvas.width / 2, traceY - foldH - 20);
+      ctx.fillText("1D ──> 2D (ENTERING N²)", canvas.width / 2, traceY - foldH - 4);
+    }
+  }
+
+  ctx.shadowBlur = 0;
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+const startBtn = document.getElementById('start-btn');
+function triggerStart(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  initAudio();
+  startRun();
+}
+
+startBtn.addEventListener('pointerdown', triggerStart);
+startBtn.addEventListener('click', triggerStart);
+
+gameLoop();
+</script>
+</body>
+</html>
